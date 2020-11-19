@@ -163,13 +163,16 @@ class Indexer:
         result = list(map(self.index_for, xs))
         result.append(self.eos_idx)
         return result
-        
+
+    @property
+    def vocab(self):
+        rvocab = [(i,w) for w,i in self.seen.items()]
+        return [w for i, w in sorted(rvocab)]
+    
 def format_sequences(xss):
     indexer = Indexer()
     result = list(map(indexer.format_sequence, xss))
-    rvocab = [(i,w) for w,i in indexer.seen.items()]
-    vocab = [w for i, w in sorted(rvocab)]
-    return result, vocab
+    return result, indexer.vocab
 
 def read_unimorph(filename, field=1):
     with open(filename) as infile:
@@ -178,7 +181,7 @@ def read_unimorph(filename, field=1):
                 parts = line.strip().split("\t")
                 yield parts[field].casefold()
 
-def train_unimorph_lm(lang, hidden_size=100, num_layers=2, batch_size=5, num_epochs=5000, print_every=200, **kwds):
+def train_unimorph_lm(lang, hidden_size=100, num_layers=2, batch_size=5, num_epochs=5000, print_every=200, num_samples=5, **kwds):
     data, vocab = list(format_sequences(read_unimorph("/Users/canjo/data/unimorph/%s" % lang)))
     print("Loaded data for %s..." % lang, file=sys.stderr)
     vocab_size = len(vocab)
@@ -186,6 +189,10 @@ def train_unimorph_lm(lang, hidden_size=100, num_layers=2, batch_size=5, num_epo
     lstm = LSTM(vocab_size, vocab_size, num_layers, hidden_size)
     print(lstm, file=sys.stderr)
     lstm.train_lm(data, batch_size=batch_size, num_epochs=num_epochs, print_every=print_every, **kwds)
+    print("Generating %d samples..." % num_samples, file=sys.stderr)
+    for _ in range(num_samples):
+        symbols = list(lstm.generate())[:-1]
+        print("".join(map(vocab.__getitem__, symbols)), file=sys.stderr)
     return lstm, vocab
 
 if __name__ == '__main__':
