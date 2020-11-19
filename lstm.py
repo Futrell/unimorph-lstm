@@ -158,10 +158,15 @@ class Indexer:
                 result = next(self.counter)
             self.seen[x] = result
             return result
+
+    def format_sequence(self, xs):
+        result = list(map(self.index_for, xs))
+        result.append(self.eos_idx)
+        return result
         
 def format_sequences(xss):
     indexer = Indexer()
-    result = [list(map(indexer.index_for, xs)) for xs in xss]
+    result = list(map(indexer.format_sequence, xss))
     rvocab = [(i,w) for w,i in indexer.seen.items()]
     vocab = [w for i, w in sorted(rvocab)]
     return result, vocab
