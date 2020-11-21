@@ -1,4 +1,5 @@
 import sys
+import math
 import itertools
 
 import numpy as np
@@ -6,6 +7,7 @@ import torch
 import random
 
 INF = float('inf')
+LOG2 = math.log(2)
 
 PADDING = '<!PAD!>'
 EOS = '<!EOS!>'
@@ -98,7 +100,7 @@ class LSTM(torch.nn.Module):
             loss.backward()
             opt.step()
             if i % print_every == 0:
-                print("epoch %d, loss = %s" % (i, str(loss.item())), file=sys.stderr)
+                print("epoch %d, loss = %s" % (i, str(loss.item() / LOG2)), file=sys.stderr)
 
     def distro_after(self, sequence):
         sequence = list(sequence) + [PADDING_IDX]
