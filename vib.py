@@ -65,7 +65,7 @@ def example(num_bits=2, beta=1/10, num_epochs=10000, print_every=100, **kwds):
         loss.backward()
         opt.step()
         if i % print_every == 0:
-            print("H[Y|Z] =", yz_loss.item() / LOG2, "I[X:Z] =", xz_loss.item() / LOG2)
+            print("H[Y|Z] =", yz_loss.item() / LOG2, "I[X:Z] <", xz_loss.item() / LOG2)
     return model
 
 if __name__ == '__main__':

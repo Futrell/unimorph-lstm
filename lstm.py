@@ -25,6 +25,7 @@ class LSTM(torch.nn.Module):
         self.hidden_size = hidden_size
         self.padding_idx = padding_idx
         self.eos_idx = eos_idx
+        self.variational = variational
 
         self.__build_model()
 
@@ -180,6 +181,17 @@ def read_unimorph(filename, field=1):
             if line.strip():
                 parts = line.strip().split("\t")
                 yield parts[field].casefold()
+
+
+# One-step Predictive Information Bottleneck objective is
+# J = -I[Z:X_t] + I[X_{<t}:Z]
+# This is bounded as
+# J < < E_P(Z|X_{<t}) log Q(X_t|Z) + D[P(Z|X) || R(Z)] >,
+# where the minimization is over P, Q, and R, and the outer expectation is over the empirical p(X_t, X_{<t})
+
+# In Futrell & Hahn (2019), P is a Gaussian distribution whose mu and diagonal Sigma are determined by matrices W_mu and W_sigma which decode an LSTM.
+# The gradient is approximated by drawing a single sample from P, and using the reparameterized gradient estimator of Kingma and Welling
+# 
 
 def train_unimorph_lm(lang, hidden_size=100, num_layers=2, batch_size=5, num_epochs=5000, print_every=200, num_samples=5, **kwds):
     data, vocab = list(format_sequences(read_unimorph("/Users/canjo/data/unimorph/%s" % lang)))
