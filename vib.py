@@ -16,8 +16,8 @@ class GaussianVIB(torch.nn.Module):
 
     def forward(self, x):
         statistics = self.encoder(x)
-        mu = statistics[:self.K]
-        std = torch.nn.functional.softplus(statistics[self.K:], beta=1) # enforce positive-semidefinite covariance matrix
+        mu = statistics[:, :self.K]
+        std = torch.nn.functional.softplus(statistics[:, self.K:], beta=1) # enforce positive-semidefinite covariance matrix
         z = reparameterize(mu, std)
         y = self.decoder(z)
         return (mu, std), y
@@ -56,9 +56,9 @@ def example(num_bits=2, beta=1/10, num_epochs=10000, print_every=100, **kwds):
         opt.zero_grad()
         index = random.choice(range(K))
         y = (1+index) > K/2
-        x = one_hot(index, K)
+        x = one_hot(index, K).unsqueeze(0)
         (mu, std), y_hat_logit = model(x)
-        y_hat = logistic(y_hat_logit)
+        y_hat = logistic(y_hat_logit.squeeze())
         yz_loss = -(y * y_hat.log() + (1-y) * (1-y_hat).log())
         xz_loss = -(1/2)*(1 + 2*std.log() - mu**2 - std**2).mean()
         loss = yz_loss + beta*xz_loss
