@@ -25,7 +25,6 @@ class LSTM(torch.nn.Module):
         self.hidden_size = hidden_size
         self.padding_idx = padding_idx
         self.eos_idx = eos_idx
-        self.variational = variational
 
         self.__build_model()
 
