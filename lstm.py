@@ -17,6 +17,11 @@ EOS_IDX = 1
 
 flat = itertools.chain.from_iterable
 
+def xavier_normal(input, output):
+    y = torch.empty(input, output)
+    torch.nn.init.xavier_normal_(y)
+    return y
+
 class LSTM(torch.nn.Module):
     def __init__(self, vocab_size, embedding_dim, num_layers, hidden_size, padding_idx=PADDING_IDX, eos_idx=EOS_IDX):
         super().__init__()
@@ -45,8 +50,8 @@ class LSTM(torch.nn.Module):
         )
 
         self.initial_state = (
-            torch.autograd.Variable(torch.randn(self.num_layers, self.hidden_size)),
-            torch.autograd.Variable(torch.randn(self.num_layers, self.hidden_size))
+            torch.autograd.Variable(xavier_normal(self.num_layers, self.hidden_size)),
+            torch.autograd.Variable(xavier_normal(self.num_layers, self.hidden_size))
         )
 
         self.decoder = torch.nn.Linear(self.hidden_size, self.vocab_size)
@@ -185,16 +190,27 @@ def read_unimorph(filename, field=1):
 
 
 # One-step Predictive Information Bottleneck objective is
-# J = -I[Z:X_t] + I[X_{<t}:Z]
+# J = H[X_t | Z] + I[X_{<t}:Z]
 # This is bounded as
 # J < < E_P(Z|X_{<t}) log Q(X_t|Z) + D[P(Z|X) || R(Z)] >,
 # where the minimization is over P, Q, and R, and the outer expectation is over the empirical p(X_t, X_{<t})
 
 # In Futrell & Hahn (2019), P is a Gaussian distribution whose mu and diagonal Sigma are determined by matrices W_mu and W_sigma which decode an LSTM.
 # The gradient is approximated by drawing a single sample from P, and using the reparameterized gradient estimator of Kingma and Welling
-# 
 
-def train_unimorph_lm(lang, hidden_size=100, num_layers=2, batch_size=5, num_epochs=5000, print_every=200, num_samples=5, **kwds):
+# One-step Recursive Information Bottleneck objective is
+# J = H[X_t | Z_t] + I[Z_{t-1}, X_{t-1} : Z_t]
+# 
+# Normally: P(Z_3 | X_1, X_2) = enc(X_1, X_2) + noise
+# Recursively: P(Z_3 | X_2, X_2) = \sum_{Z_1, Z_2} P(Z_1) P(Z_2 | X_1, Z_1) P(Z_3 | Z_2, X_2)
+# P(Z_1) = constant at z_1
+# P(Z_2 | X_1, Z_1) ~ N(mu(X_1, Z_1), sigma(X_1, Z_1))
+# P(Z_3 | X_2, Z_2) ~ N(mu(X_2, Z_2), sigma(X_2, Z_2))
+# P(Z_3 | X_1, X_2) ~ N(mu(X_1, Z_1) + mu(X_2, mu(X_1, Z_1)), ??)
+
+
+
+def train_unimorph_lm(lang, hidden_size=100, num_layers=2, batch_size=5, num_epochs=10000, print_every=200, num_samples=5, **kwds):
     data, vocab = list(format_sequences(read_unimorph("/Users/canjo/data/unimorph/%s" % lang)))
     print("Loaded data for %s..." % lang, file=sys.stderr)
     vocab_size = len(vocab)
